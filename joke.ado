@@ -206,6 +206,27 @@ qui {
 
 end
 
+/*==================================================
+Mata libjason caller           
+==================================================*/
+
+cap mata : mata drop getJoke()
+mata
+
+string rowvector getJoke(url, string rowvector selectors) {
+   pointer (class libjson scalar) scalar root
+    root = libjson::webcall(url,"")
+    if (root) {
+         string rowvector res
+         res = J(1,cols(selectors),"")
+         for (c=1; c<= cols(selectors); c++) {       
+            res[c] = root->getString( libjson::parseSelector(selectors[c]) ,"")
+         }
+    return(res)
+    } else return(J(1,0,""));
+}			
+end
+
 exit
 /* End of do-file */
 
