@@ -58,11 +58,17 @@ local crlf "`=char(10)'`=char(13)'"
 		local --i
 		local p = runiformint(1,`i')
 		
-		local p = 1 // to delete
+		local p = 3 // to delete
 		
 		*---------- Initial conditions depending on website or API
 		if (`p' == 1) {
 			local selectors `"("setup","punchline","type","id")"'
+		}
+		if (`p' == 2) {
+			local selectors `"("value:joke","type", "value:id")"'
+		}
+		if (`p' == 3) {
+			local selectors `"("attachments:1:text","response_type", "attachments:1:footer")"'
 		}
 		
 		*---------- Get the joke in matrix
@@ -80,6 +86,31 @@ local crlf "`=char(10)'`=char(13)'"
 			return local type= "`type'"
 			return local id= "`id'"
 		}
+		
+		if (`p' == 2) {
+			mata: st_strscalar("s_joke", joke[1,1]);  /* 
+			 */   st_local("type"      , joke[1,2]);  /* 
+			 */   st_local("id"        , joke[1,3])
+			
+			return local type= "`type'"
+			return local id= "`id'"
+		}
+		
+		if (`p' == 3) {
+			mata: st_strscalar("s_joke", joke[1,1]);  /* 
+			 */   st_local("type"      , joke[1,2]);  /* 
+			 */   st_local("footer"        , joke[1,3])
+			
+			return local type= "`type'"
+			return local footer= "`footer'"
+		}
+		
+		*---------- Clean a little
+		scalar s_joke = subinstr(s_joke, `"&quot;"',`"""', .)
+		scalar s_joke = subinstr(s_joke, `"&#39;"',"`=char(39)'", .)
+		scalar s_joke = subinstr(s_joke, `"\u2019"',"`=char(39)'", .)
+		scalar s_joke = subinstr(s_joke, `"\u2013"',"`=char(45)'", .)
+		scalar s_joke = subinstr(s_joke, `"\r\n"',"`crlf'", .)
 		noi disp s_joke
 		
 	}
