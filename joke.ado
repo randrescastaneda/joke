@@ -1,3 +1,4 @@
+*! version 0.3 	<Mar 05, 2019> 		Andres Castaneda
 *! version 0.2 	<Nov 13, 2017> 		Andres Castaneda
 *! version 0.1 	<Mar 13, 2014> 		Andres Castaneda
 /*===========================================================================
@@ -17,136 +18,75 @@ Output:             display joke
 ===============================================================================================*/
 version 14.2
 
-program define joke
+program define joke, rclass
 syntax  [anything(name=lang)] , [topic(string) ]
 
 
-/*===============================================================================================
-1: get joke
-===============================================================================================*/
 
-*------------------------------------1.1: set program ------------------------------------
+cap confirm file "c:\ado\plus\l\libjson.mlib"
+if (_rc) ssc install libjson
+	
 
+*---------------------------1.1: set program ------------------------------------
+
+qui {
 tempfile jokefile temp1
 tempname fh 
 
-*------------------------------------1.2: download the data ------------------------------------
-qui {
+local crlf "`=char(10)'`=char(13)'"
+
 	preserve
 	if ("`lang'" == "") local lang "en" 
 	local lang = lower("`lang'")
+
+	/*=================================================================================
+	1: English  
+	=================================================================================*/
 	
+	*-------------------------1.2: download the data ---------------------------------
 	if (regexm("`lang'", "en")) {
+		local u1 "https://official-joke-api.appspot.com/random_joke"
+		local u2 "http://api.icndb.com/jokes/random"
+		local u3 "https://icanhazdadjoke.com/slack"
+		local u4 "https://geek-jokes.sameerkumar.website/api"
+		local u5 ""  // Add more APIs
 		
-		local homepage "http://www.short-funny.com/"
-		local crlf "`=char(10)'`=char(13)'"
+		local i = 1
+		while (`"`u`i''"' != "") {
+			local ++i
+		}
+		local --i
+		local p = runiformint(1,`i')
 		
-		local topics funniest-jokes-2 new-jokes one-liners hilarious-jokes  ///
-		pirate-jokes kids-jokes fun-facts marriage-wife-husband-jokes     ///
-		redneck-jokes clean-jokes yo-mama-jokes funny-riddles-answers     ///
-		dad-jokes funny-quotes best-puns little-johnny-jokes              ///
-		cute-jokes best-knock-jokes blonde-jokes funny-sayings            ///
-		funny-pick-up-lines bad-jokes cross-the-road-jokes geek-jokes shower-thoughts
+		local p = 1 // to delete
 		
-		local n       `: word count `topics''
-		local page    `: word `=round(runiform(0.5,`n'))' of `topics'' 
-		local webpage "`homepage'`page'"
-		
-		tempname html1 html2
-		scalar `html1' = fileread("`webpage'.php")
-		
-		disp `html1'
-		disp  "`webpage'.php"
-		// find max number of parts in selected topic
-		local maxprt ""
-		local c = 30
-		while ("`maxprt'" == "" & `c' > 0) {
-			if regexm(`html1', "[Pp]art `c'") local maxprt `c'
-			local --c
+		*---------- Initial conditions depending on website or API
+		if (`p' == 1) {
+			local selectors `"("setup","punchline","type","id")"'
 		}
 		
-		// choose random part
-		tempname htmljoke htmljoke2
-		if ("`maxprt'" != "")  {			
-			local part = round(runiform(0.5, `maxprt'))
-			if (`part' == 1) local hpart ""
-			else             local hpart "-`part'"
-			local webpage: subinstr local webpage "-2" "", all // for funniest-jokes-2
-			scalar `htmljoke' = fileread("`webpage'`hpart'.php")
+		*---------- Get the joke in matrix
+		noi mata: joke=getJoke("`u`p''",`selectors')
+		
+		*---------- Display and return depending on API
+		
+		if (`p' == 1) {
+			mata: st_strscalar("s_joke", joke[1,1]);  /* 
+			 */   st_local("punchline" , joke[1,2]);  /* 
+			 */   st_local("type"      , joke[1,3]);  /* 
+			 */   st_local("id"        , joke[1,4])
+			
+			scalar s_joke = "Q: " + s_joke + "`crlf'A: `punchline'"
+			return local type= "`type'"
+			return local id= "`id'"
 		}
-		else scalar `htmljoke' = `html1'
+		noi disp s_joke
 		
-		// appropriate replacements in order to read the text correctly
-		if ("`lrep'" == "") local lrep "LlLl"
-		if ("`rrep'" == "") local rrep "RrRr"
-		if ("`dblq'" == "") local dblq "DQDQ"
-		
-		scalar `htmljoke' = subinstr(`htmljoke', uchar(96), "`lrep'",.)  // replace `
-		scalar `htmljoke' = subinstr(`htmljoke', uchar(39), "`rrep'",.)  // replace '
-		scalar `htmljoke' = subinstr(`htmljoke', uchar(34), "`dblq'",.)  // replace ""
-		
-		scalar `htmljoke' = subinstr(`htmljoke', "`=uchar(10)'", "c10",.)
-		scalar `htmljoke' = subinstr(`htmljoke', "`=uchar(13)'", "c13",.)
-		scalar `htmljoke' = subinstr(`htmljoke', `"<hr class=`dblq'linie`dblq'>"', "~",.)
-		
-		// create local to be parsed
-		local cleanj = `htmljoke'
-		tokenize `"`cleanj'"', parse(`"~"')
-		
-		// variable with jokes. One per line. 
-		drop _all 
-		set obs 500
-		tempvar jokes
-		gen `jokes' = "" 	
-		local c = 3
-		local l = 0
-		while (`"``c''"' != "") {
-			local ++l
-			replace `jokes' = `"``c''"' in `l'
-			local c = `c' + 2
-		}
-		
-		// treatment of variable with jokes
-		replace `jokes' = stritrim(strtrim(`jokes'))
-		replace `jokes' = regexs(2) if regexm(`jokes', `"(<div.*</div>)(.*)"')
-		drop if regexm(`jokes', "<div|href\=|<[/]?body>|<[/]html>")
-		
-		drop if `jokes' == ""
-		
-		replace `jokes' = subinstr(`jokes', "&quot;", `"""', .)
-		replace `jokes' = subinstr(`jokes', "&nbsp;", `""', .)
-		replace `jokes' = subinstr(`jokes', "&#", `"\`=uchar("', .)  //  "'"'
-		replace `jokes' = subinstr(`jokes', ";", `")'"', .)
-		replace `jokes' = subinstr(`jokes', uchar(9), " ", .)
-		
-		local jk = `jokes'[`=round(runiform(0.5, _N))']
-		tempname joke
-		scalar `joke' = `"`jk'"'
-		
-		* scalar `joke' = subinstr(`joke', "&#", `"\`=uchar("', .)                    //  "'"'
-		scalar `joke' = ustrregexra(`joke', "<br>[ ]?<br>", "`crlf'" , 1)             //  
-		scalar `joke' = ustrregexra(`joke', "(<br>[ \-]?<br>|c10c13)", "`crlf'" , 1)  //  
-		scalar `joke' = ustrregexra(`joke', "(c13c10)", " " , 1)                      //  
-		scalar `joke' = ustrregexra(`joke', "(c10|c13)", " " , 1)                     //  
-		scalar `joke' = ustrregexra(`joke', "<br>", "" , 1)                           //  
-		scalar `joke' = ustrregexrf(`joke', "^[0-9]+", "")                            //  
-		
-		scalar `joke' = subinstr(`joke', "`lrep'", uchar(96),.)  // replace `
-		scalar `joke' = subinstr(`joke', "`rrep'", uchar(39),.)  // replace '
-		scalar `joke' = subinstr(`joke', "`dblq'", uchar(34),.)  // replace ""
-		
-		
-		
-		scalar `joke' = "`crlf'" + ustrtrim(`joke') + "`crlf'"
-		noi disp as result stritrim(`joke') _n
-		
-	
-		/* 
-		disp `"{browse "`webpage'`hpart'.php"}"' _n ///
-		`"{stata "copy `webpage'`hpart'.php joke.txt, replace": to stata}"'
-		*/
 	}
 	
+	/*==================================================
+           Spanish
+	==================================================*/
 	else if (regexm("`lang'", "sp"))  {
 		copy "http://www.chistes.com/ChisteAlAzar.asp?n=3" `jokefile', replace
 		* filter left and right quotes 
