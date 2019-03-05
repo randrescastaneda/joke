@@ -19,7 +19,7 @@ Output:             display joke
 version 14.2
 
 program define joke, rclass
-syntax  [anything(name=lang)] , [topic(string) ]
+syntax  [anything(name=lang)] , [ URLn(numlist int max=1) ]
 
 
 
@@ -49,16 +49,16 @@ local crlf "`=char(10)'`=char(13)'"
 		local u2 "http://api.icndb.com/jokes/random"
 		local u3 "https://icanhazdadjoke.com/slack"
 		local u4 "https://geek-jokes.sameerkumar.website/api"
-		local u5 ""  // Add more APIs
+		local u5 ""   // Add more APIs
+		local u6 ""  // Add more APIs
 		
 		local i = 1
 		while (`"`u`i''"' != "") {
 			local ++i
 		}
 		local --i
-		local p = runiformint(1,`i')
-		
-		local p = 3 // to delete
+		if ("`urln'" == "") local p = runiformint(1,`i')
+		else                local p = `urln'
 		
 		*---------- Initial conditions depending on website or API
 		if (`p' == 1) {
@@ -70,37 +70,55 @@ local crlf "`=char(10)'`=char(13)'"
 		if (`p' == 3) {
 			local selectors `"("attachments:1:text","response_type", "attachments:1:footer")"'
 		}
+		if (`p' == 4) {
+			scalar s_joke = fileread("`u`p''")
+			noi disp in y s_joke
+			exit
+		}
 		
 		*---------- Get the joke in matrix
-		noi mata: joke=getJoke("`u`p''",`selectors')
+		cap mata: joke=getJoke("`u`p''",`selectors')
+		if (_rc) {
+			noi joke_err ${joke_err}
+			error
+		}
 		
 		*---------- Display and return depending on API
 		
 		if (`p' == 1) {
-			mata: st_strscalar("s_joke", joke[1,1]);  /* 
+			cap mata: st_strscalar("s_joke", joke[1,1]);  /* 
 			 */   st_local("punchline" , joke[1,2]);  /* 
 			 */   st_local("type"      , joke[1,3]);  /* 
 			 */   st_local("id"        , joke[1,4])
-			
-			scalar s_joke = "Q: " + s_joke + "`crlf'A: `punchline'"
+			if (_rc) {
+				noi joke_err ${joke_err}
+				error
+			}
+			scalar s_joke = "-: " + s_joke + "`crlf'-: `punchline'"
 			return local type= "`type'"
 			return local id= "`id'"
 		}
 		
 		if (`p' == 2) {
-			mata: st_strscalar("s_joke", joke[1,1]);  /* 
+			cap mata: st_strscalar("s_joke", joke[1,1]);  /* 
 			 */   st_local("type"      , joke[1,2]);  /* 
 			 */   st_local("id"        , joke[1,3])
-			
+			if (_rc) {
+				noi joke_err ${joke_err}
+				error
+			}
 			return local type= "`type'"
 			return local id= "`id'"
 		}
 		
 		if (`p' == 3) {
-			mata: st_strscalar("s_joke", joke[1,1]);  /* 
+			cap mata: st_strscalar("s_joke", joke[1,1]);  /* 
 			 */   st_local("type"      , joke[1,2]);  /* 
 			 */   st_local("footer"        , joke[1,3])
-			
+			if (_rc) {
+				noi joke_err ${joke_err}
+				error
+			}
 			return local type= "`type'"
 			return local footer= "`footer'"
 		}
@@ -111,7 +129,7 @@ local crlf "`=char(10)'`=char(13)'"
 		scalar s_joke = subinstr(s_joke, `"\u2019"',"`=char(39)'", .)
 		scalar s_joke = subinstr(s_joke, `"\u2013"',"`=char(45)'", .)
 		scalar s_joke = subinstr(s_joke, `"\r\n"',"`crlf'", .)
-		noi disp s_joke
+		noi disp in y s_joke
 		
 	}
 	
@@ -121,10 +139,10 @@ local crlf "`=char(10)'`=char(13)'"
 	else if (regexm("`lang'", "sp"))  {
 		copy "http://www.chistes.com/ChisteAlAzar.asp?n=3" `jokefile', replace
 		* filter left and right quotes 
-		filefilter `chiste' `temp1', from("\LQ") to("LLLQ") replace
-		filefilter `temp1' `chiste', from("\RQ") to("RRRQ") replace
+		filefilter `jokefile' `temp1', from("\LQ") to("LLLQ") replace
+		filefilter `temp1' `jokefile', from("\RQ") to("RRRQ") replace
 		
-		file open `fh' using `chiste', read
+		file open `fh' using `jokefile', read
 		file read `fh' line
 		
 		
@@ -177,8 +195,40 @@ local crlf "`=char(10)'`=char(13)'"
 
 end
 
+program define joke_err
+
+if ("`1'" == "") {
+	global joke_err = 1
+	noi disp in red "Unexpected web error." _n /* 
+	 */ "This is not a joke. Please try again."
+	error
+}
+if ("`1'" == "1") {
+	global joke_err = 2
+	noi disp in red "I know, it happened again!" _n /* 
+	 */ "This is not a joke. Please try one more time."
+}
+if ("`1'" == "2") {
+	global joke_err = 3
+	noi disp in red "Yeap.. agianst all odds it failed again. " _n /* 
+	 */ "This is not a joke. Please try again."
+}
+if ("`1'" == "3") {
+	global joke_err = 4
+	noi disp in red "I think by now you don't like this command." _n /* 
+	 */ "I understand. But if you want another joke, please try again."
+}
+else {
+	global ++joke_err
+	noi disp in red "Guess what? another web error!!!" _n /* 
+	 */ "Please try again and have fun"
+}
+
+end 
+
+
 /*==================================================
-Mata libjason caller           
+Mata libjson caller           
 ==================================================*/
 
 cap mata : mata drop getJoke()
