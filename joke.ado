@@ -278,3 +278,116 @@ disp s_joke
 
 
 noi disp as result ltrim(rtrim(itrim(`joke')))
+
+
+
+
+
+
+local homepage "http://www.short-funny.com/"
+		local crlf "`=char(10)'`=char(13)'"
+		
+		local topics funniest-jokes-2 new-jokes one-liners hilarious-jokes  ///
+		pirate-jokes kids-jokes fun-facts marriage-wife-husband-jokes     ///
+		redneck-jokes clean-jokes yo-mama-jokes funny-riddles-answers     ///
+		dad-jokes funny-quotes best-puns little-johnny-jokes              ///
+		cute-jokes best-knock-jokes blonde-jokes funny-sayings            ///
+		funny-pick-up-lines bad-jokes cross-the-road-jokes geek-jokes shower-thoughts
+		
+		local n       `: word count `topics''
+		local page    `: word `=round(runiform(0.5,`n'))' of `topics'' 
+		local webpage "`homepage'`page'"
+		
+		tempname html1 html2
+		scalar `html1' = fileread("`webpage'.php")
+		
+		disp `html1'
+		disp  "`webpage'.php"
+		// find max number of parts in selected topic
+		local maxprt ""
+		local c = 30
+		while ("`maxprt'" == "" & `c' > 0) {
+			if regexm(`html1', "[Pp]art `c'") local maxprt `c'
+			local --c
+		}
+		
+		// choose random part
+		tempname htmljoke htmljoke2
+		if ("`maxprt'" != "")  {			
+			local part = round(runiform(0.5, `maxprt'))
+			if (`part' == 1) local hpart ""
+			else             local hpart "-`part'"
+			local webpage: subinstr local webpage "-2" "", all // for funniest-jokes-2
+			scalar `htmljoke' = fileread("`webpage'`hpart'.php")
+		}
+		else scalar `htmljoke' = `html1'
+		
+		// appropriate replacements in order to read the text correctly
+		if ("`lrep'" == "") local lrep "LlLl"
+		if ("`rrep'" == "") local rrep "RrRr"
+		if ("`dblq'" == "") local dblq "DQDQ"
+		
+		scalar `htmljoke' = subinstr(`htmljoke', uchar(96), "`lrep'",.)  // replace `
+		scalar `htmljoke' = subinstr(`htmljoke', uchar(39), "`rrep'",.)  // replace '
+		scalar `htmljoke' = subinstr(`htmljoke', uchar(34), "`dblq'",.)  // replace ""
+		
+		scalar `htmljoke' = subinstr(`htmljoke', "`=uchar(10)'", "c10",.)
+		scalar `htmljoke' = subinstr(`htmljoke', "`=uchar(13)'", "c13",.)
+		scalar `htmljoke' = subinstr(`htmljoke', `"<hr class=`dblq'linie`dblq'>"', "~",.)
+		
+		// create local to be parsed
+		local cleanj = `htmljoke'
+		tokenize `"`cleanj'"', parse(`"~"')
+		
+		// variable with jokes. One per line. 
+		drop _all 
+		set obs 500
+		tempvar jokes
+		gen `jokes' = "" 	
+		local c = 3
+		local l = 0
+		while (`"``c''"' != "") {
+			local ++l
+			replace `jokes' = `"``c''"' in `l'
+			local c = `c' + 2
+		}
+		
+		// treatment of variable with jokes
+		replace `jokes' = stritrim(strtrim(`jokes'))
+		replace `jokes' = regexs(2) if regexm(`jokes', `"(<div.*</div>)(.*)"')
+		drop if regexm(`jokes', "<div|href\=|<[/]?body>|<[/]html>")
+		
+		drop if `jokes' == ""
+		
+		replace `jokes' = subinstr(`jokes', "&quot;", `"""', .)
+		replace `jokes' = subinstr(`jokes', "&nbsp;", `""', .)
+		replace `jokes' = subinstr(`jokes', "&#", `"\`=uchar("', .)  //  "'"'
+		replace `jokes' = subinstr(`jokes', ";", `")'"', .)
+		replace `jokes' = subinstr(`jokes', uchar(9), " ", .)
+		
+		local jk = `jokes'[`=round(runiform(0.5, _N))']
+		tempname joke
+		scalar `joke' = `"`jk'"'
+		
+		* scalar `joke' = subinstr(`joke', "&#", `"\`=uchar("', .)                    //  "'"'
+		scalar `joke' = ustrregexra(`joke', "<br>[ ]?<br>", "`crlf'" , 1)             //  
+		scalar `joke' = ustrregexra(`joke', "(<br>[ \-]?<br>|c10c13)", "`crlf'" , 1)  //  
+		scalar `joke' = ustrregexra(`joke', "(c13c10)", " " , 1)                      //  
+		scalar `joke' = ustrregexra(`joke', "(c10|c13)", " " , 1)                     //  
+		scalar `joke' = ustrregexra(`joke', "<br>", "" , 1)                           //  
+		scalar `joke' = ustrregexrf(`joke', "^[0-9]+", "")                            //  
+		
+		scalar `joke' = subinstr(`joke', "`lrep'", uchar(96),.)  // replace `
+		scalar `joke' = subinstr(`joke', "`rrep'", uchar(39),.)  // replace '
+		scalar `joke' = subinstr(`joke', "`dblq'", uchar(34),.)  // replace ""
+		
+		
+		
+		scalar `joke' = "`crlf'" + ustrtrim(`joke') + "`crlf'"
+		noi disp as result stritrim(`joke') _n
+		
+	
+		/* 
+		disp `"{browse "`webpage'`hpart'.php"}"' _n ///
+		`"{stata "copy `webpage'`hpart'.php joke.txt, replace": to stata}"'
+		*/
