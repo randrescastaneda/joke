@@ -17,34 +17,50 @@
 {p 8 17 2}
 {cmdab:joke}
 [{cmd:}
-{it:{ul:En}glish | {ul:Sp}anish}]
+{it:{ul:sp}anish}]
 
 {marker description}{...}
 {title:Description}
 {pstd}
-{cmd:joke} displays a new different joke each time you prompt it
+{cmd:joke} displays a  joke each time you execute it. 
+
+{title:options}
+{phang} {opt urln(integer)} refers to the id number of the source of the joke. 
+The table below summarizes the sources available right now and their corresponding 
+id number. If the {opt urln(integer)} is not entered, {cmd:joke} will randomly select 
+one of the sources and display a random joke from it. 
+
+		Id number{col 30}Source
+		{hline 50}
+		{cmd:1}{col 30} {browse "https://official-joke-api.appspot.com/random_joke": official-joke-api.appspot.com}
+		{cmd:2}{col 30} {browse "http://api.icndb.com/jokes/random"                : api.icndb.com}
+		{cmd:3}{col 30} {browse "https://icanhazdadjoke.com/slack"                 : icanhazdadjoke.com}
+		{cmd:4}{col 30} {browse "https://geek-jokes.sameerkumar.website/api"       : geek-jokes}
+		{hline 50}
 
 
 {marker examples}{...}
 {title:Examples}
 
-{phang} {stata "joke sp": joke sp}		// joke in Spanish
+{phang} {stata "joke sp": joke sp}  {err: // joke in Spanish in development}
 
-{phang} {stata "joke en": joke en}		// joke in English
+{phang} {stata "joke"}	  	// joke in English
+
+{phang} {stata "joke, urln(3)"}	  	// random joke from icanhazdadjoke.com
+
 
 {title:Author}
-{p}
 
-Andres Castaneda, 
+{p 4 4 4}R.Andres Castaneda, The World Bank{p_end}
+{p 6 6 4}Email: {browse "acastanedaa@worldbank.org":  acastanedaa@worldbank.org}{p_end}
+{p 6 6 4}GitHub:{browse "https://github.com/randrescastaneda": randrescastaneda }{p_end}
+{p 6 6 4}Develpment:{browse "https://github.com/randrescastaneda/joke": randrescastaneda/joke}{p_end}
 
-Email {browse "mailto:acastanedaa@worldbank.org":acastanedaa@worldbank.org}
-
-{title:References}
-{p}
-
-the jokes used in this command are taken from 
-{ browse "http://www.chistes.com/ChisteAlAzar.asp?n=3": chistes}
-{ browse "http://www.ajokeaday.com/ChisteAlAzar.asp?": ajokeaday}
+{title:Disclaimer}
+{phang}
+I am not responsible for the quality and integrity of jokes. I did some research and 
+tried to include sources whose jokes are fairly good and not offensive. However, once 
+in a while some inappropriate joke pushes in.
 
 
 

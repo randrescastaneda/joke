@@ -123,7 +123,7 @@ local crlf "`=char(10)'`=char(13)'"
 			return local footer= "`footer'"
 		}
 		
-		*---------- Clean a little
+		*---------- Clean and display
 		scalar s_joke = subinstr(s_joke, `"&quot;"',`"""', .)
 		scalar s_joke = subinstr(s_joke, `"&#39;"',"`=char(39)'", .)
 		scalar s_joke = subinstr(s_joke, `"\u2019"',"`=char(39)'", .)
