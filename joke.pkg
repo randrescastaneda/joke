@@ -1,6 +1,9 @@
 v 3
-d 'JOKE'
+d 'JOKE': Display jokes in Stata
 d 
-d Distribution-Date: 20feb2019
-d License: MIT
+d Distribution-Date: 06mar2019
+d License: None
 d 
+F joke.ado
+F joke.sthlp
+F license
