@@ -156,7 +156,7 @@ local crlf "`=char(10)'`=char(13)'"
 				local line: subinstr local line `"</div>"' "", all
 				local line: subinstr local line "<BR>" "", all
 				local line: subinstr local line "LLLQ" "`", all 	// '" put Left quote back
-				local line: subinstr local line "RRRQ" "'", all		// put right quote back
+				local line: subinstr local line "RRRQ" "'", all		// " put right quote back
 				
 				* display when joke is found
 				if !regexm(`"`line'"',`"<div class="opciones">"') {
