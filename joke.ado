@@ -13,13 +13,14 @@ References:
 Output:             display joke
 ===========================================================================*/
 
-/*===============================================================================================
+/*===============================================================================
 0: Program set up
-===============================================================================================*/
+===============================================================================*/
 version 14.2
 
 program define joke, rclass
-syntax  [anything(name=lang)] , [ URLn(numlist int max=1) ]
+syntax  [anything(name=lang)] , [ URLn(numlist int max=1)  /*
+        */  ignore(string) ]
 
 
 
@@ -30,33 +31,42 @@ if (_rc) ssc install libjson
 *---------------------------1.1: set program ------------------------------------
 
 qui {
+
+if ("`ignore'" == "") local ignore ""
+local ignore: subinstr local ignore " " "|", all
+
+
 tempfile jokefile temp1
 tempname fh 
 
 local crlf "`=char(10)'`=char(13)'"
 
-	preserve
-	if ("`lang'" == "") local lang "en" 
-	local lang = lower("`lang'")
+preserve
+if ("`lang'" == "") local lang "en" 
+local lang = lower("`lang'")
+/*=================================================================================
+1: English  
+=================================================================================*/
 
-	/*=================================================================================
-	1: English  
-	=================================================================================*/
+*-------------------------1.2: download the data ---------------------------------
+if (regexm("`lang'", "en")) {
+	local u1 "https://official-joke-api.appspot.com/random_joke"
+	local u2 "http://api.icndb.com/jokes/random"
+	local u3 "https://icanhazdadjoke.com/slack"
+	local u4 "https://geek-jokes.sameerkumar.website/api"
+	local u5 ""   // Add more APIs
+	local u6 ""  // Add more APIs
 	
-	*-------------------------1.2: download the data ---------------------------------
-	if (regexm("`lang'", "en")) {
-		local u1 "https://official-joke-api.appspot.com/random_joke"
-		local u2 "http://api.icndb.com/jokes/random"
-		local u3 "https://icanhazdadjoke.com/slack"
-		local u4 "https://geek-jokes.sameerkumar.website/api"
-		local u5 ""   // Add more APIs
-		local u6 ""  // Add more APIs
-		
-		local i = 1
-		while (`"`u`i''"' != "") {
-			local ++i
-		}
-		local --i
+	local i = 1
+	while (`"`u`i''"' != "") {
+		local ++i
+	}
+	local --i
+
+	local sdone = 0 
+
+	while (`sdone' == 0) {
+
 		if ("`urln'" == "") local p = runiformint(1,`i')
 		else                local p = `urln'
 		
@@ -72,8 +82,15 @@ local crlf "`=char(10)'`=char(13)'"
 		}
 		if (`p' == 4) {
 			scalar s_joke = fileread("`u`p''")
-			noi disp in y s_joke
-			exit
+			if regexm(s_joke, "error (5100|601)") {
+				noi joke_err 5100
+				error 5100
+			}
+			else {
+				noi disp in y s_joke
+				exit
+			}
+
 		}
 		
 		*---------- Get the joke in matrix
@@ -123,6 +140,10 @@ local crlf "`=char(10)'`=char(13)'"
 			return local footer= "`footer'"
 		}
 		
+		
+		* ---------- ignore joke with specific words
+		if regexm(s_joke, "`ignore'") continue 
+
 		*---------- Clean and display
 		scalar s_joke = subinstr(s_joke, `"&quot;"',`"""', .)
 		scalar s_joke = subinstr(s_joke, `"&#39;"',"`=char(39)'", .)
@@ -130,64 +151,71 @@ local crlf "`=char(10)'`=char(13)'"
 		scalar s_joke = subinstr(s_joke, `"\u2013"',"`=char(45)'", .)
 		scalar s_joke = subinstr(s_joke, `"\r\n"',"`crlf'", .)
 		noi disp in y s_joke
-		
-	}
+		local sdone = 1
+	} // end of while sdone
 	
-	/*==================================================
-           Spanish
-	==================================================*/
-	else if (regexm("`lang'", "sp"))  {
-		copy "http://www.chistes.com/ChisteAlAzar.asp?n=3" `jokefile', replace
-		* filter left and right quotes 
-		filefilter `jokefile' `temp1', from("\LQ") to("LLLQ") replace
-		filefilter `temp1' `jokefile', from("\RQ") to("RRRQ") replace
+} // end of Joke in English
+
+/*==================================================
+          Spanish
+==================================================*/
+else if (regexm("`lang'", "sp"))  {
+	copy "http://www.chistes.com/ChisteAlAzar.asp?n=3" `jokefile', replace
+	* filter left and right quotes 
+	filefilter `jokefile' `temp1', from("\LQ") to("LLLQ") replace
+	filefilter `temp1' `jokefile', from("\RQ") to("RRRQ") replace
+	
+	file open `fh' using `jokefile', read
+	file read `fh' line
+	
+	
+	*----------------------------1.3: clean lines ------------------------------------
+	local current 0
+	while r(eof)==0 {
 		
-		file open `fh' using `jokefile', read
-		file read `fh' line
-		
-		
-		*------------------------------------1.3: clean lines ------------------------------------
-		local current 0
-		while r(eof)==0 {
+		if regexm(`"`line'"',`"<div class="chiste">"')     local current 1
+		if (`current' == 1) {
+			local line: subinstr local line `"<div class="chiste">"' "", all
+			local line: subinstr local line `"</div>"' "", all
+			local line: subinstr local line "<BR>" "", all
+			local line: subinstr local line "LLLQ" "`", all 	// '" put Left quote back
+			local line: subinstr local line "RRRQ" "'", all		// "put right quote back
 			
-			if regexm(`"`line'"',`"<div class="chiste">"')     local current 1
-			if (`current' == 1) {
-				local line: subinstr local line `"<div class="chiste">"' "", all
-				local line: subinstr local line `"</div>"' "", all
-				local line: subinstr local line "<BR>" "", all
-				local line: subinstr local line "LLLQ" "`", all 	// '" put Left quote back
-				local line: subinstr local line "RRRQ" "'", all		// " put right quote back
+			* display when joke is found
+			if !regexm(`"`line'"',`"<div class="opciones">"') {
+				local l = ustrlen(`"`line'"')
 				
-				* display when joke is found
-				if !regexm(`"`line'"',`"<div class="opciones">"') {
+				* convert unicode characters
+				mata: a = st_local("line"); /*
+				*/    a = invtokens(uchar(ascii(a)), ""); /*
+				*/    st_local("line", a)
+
+				* trim on the 80th column for long lines
+				while (`l' > 80) {
+					local d = substr(`"`line'"', 1, 80)
+					if regexm(`"`d'"',"[a-zA-Z\.]$") local dash "-"
+					else local dash ""
+					noi disp as res `"`d'`dash'"'
+					local line = substr(`"`line'"', 81, .)
 					local l = length(`"`line'"')
-					
-					* trim on the 80th column for long lines
-					while (`l' > 80) {
-						local d = substr(`"`line'"', 1, 80)
-						if regexm(`"`d'"',"[a-zA-Z\.]$") local dash "-"
-						else local dash ""
-						noi disp in g `"`d'`dash'"'
-						local line = substr(`"`line'"', 81, .)
-						local l = length(`"`line'"')
-					}
-					if (`l' <= 80) noi disp in green `"`line'"'
 				}
-			}	//  end of (`current' == 1) condition
-			
-			if (regexm(`"`line'"',`"<div class="opciones">"') & (`current' == 1))  {
-				file close `fh'
-				exit
+				if (`l' <= 80) noi disp as res `"`line'"'
 			}
-			
-			file read `fh' line
-		} //  end of while r(eof) == 0
-	}
-	
-	else {
-		noi disp in red "You must specify a joke either in {ul:En}glish or {ul:S}panish"
-		error
-	}
+		}	//  end of (`current' == 1) condition
+		
+		if (regexm(`"`line'"',`"<div class="opciones">"') & (`current' == 1))  {
+			file close `fh'
+			exit
+		}
+		
+		file read `fh' line
+	} //  end of while r(eof) == 0
+} // end fo Spanish
+
+else {
+	noi disp in red "You must specify a joke either in {ul:En}glish or {ul:S}panish"
+	error
+}
 	
 	
 	
@@ -198,26 +226,32 @@ end
 program define joke_err
 
 if ("`1'" == "") {
-	global joke_err = 1
+	global joke_err = ${joke_err} + 1
 	noi disp in red "Unexpected web error." _n /* 
 	 */ "This is not a joke. Please try again."
 	error
 }
 if ("`1'" == "1") {
-	global joke_err = 2
+	global joke_err = ${joke_err} + 1
 	noi disp in red "I know, it happened again!" _n /* 
 	 */ "This is not a joke. Please try one more time."
 }
 if ("`1'" == "2") {
-	global joke_err = 3
+	global joke_err = ${joke_err} + 1
 	noi disp in red "Yeap.. agianst all odds it failed again. " _n /* 
 	 */ "This is not a joke. Please try again."
 }
 if ("`1'" == "3") {
-	global joke_err = 4
+	global joke_err = ${joke_err} + 1
 	noi disp in red "I think by now you don't like this command." _n /* 
 	 */ "I understand. But if you want another joke, please try again."
 }
+if ("`1'" == "5100") {
+	global joke_err = ${joke_err} + 1
+	noi disp in red _n "The error above means that your firewall is blocking Stata " _n /* 
+	 */ "from accessing the joke. Please try again."
+}
+
 else {
 	global ++joke_err
 	noi disp in red "Guess what? another web error!!!" _n /* 

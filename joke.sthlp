@@ -56,6 +56,13 @@ one of the sources and display a random joke from it.
 {p 6 6 4}GitHub:{browse "https://github.com/randrescastaneda": randrescastaneda }{p_end}
 {p 6 6 4}Develpment:{browse "https://github.com/randrescastaneda/joke": randrescastaneda/joke}{p_end}
 
+
+{title:Reference}
+{phang}
+This program relies heavely on the mata library libjson by Erik Lindley. 
+
+{p 6 6 4}{stata "ssc install libjson"}{p_end}
+
 {title:Disclaimer}
 {phang}
 I am not responsible for the quality and integrity of jokes. I did some research and 
