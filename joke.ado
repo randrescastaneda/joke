@@ -19,8 +19,8 @@ Output:             display joke
 version 14.2
 
 program define joke, rclass
-syntax  [anything(name=lang)] , [ URLn(numlist int max=1)  /*
-        */  ignore(string) ]
+syntax  [anything(name=lang)] , [ URLn(numlist int max=1)  ///
+  ignore(string) ]
 
 
 
